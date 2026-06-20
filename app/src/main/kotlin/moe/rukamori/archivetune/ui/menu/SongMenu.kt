@@ -131,6 +131,7 @@ fun SongMenu(
     playlistBrowseId: String? = null,
     onDismiss: () -> Unit,
     isFromCache: Boolean = false,
+    isHiddenPlaylist: Boolean = false,
 ) {
     val context = LocalContext.current
     val database = LocalDatabase.current
@@ -690,41 +691,41 @@ fun SongMenu(
                             )
                         }
 
-                        if (playlistSong != null) {
-                            ListItem(
-                                headlineContent = {
-                                    Text(
-                                        text = stringResource(R.string.remove_from_playlist),
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
-                                },
-                                leadingContent = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.delete),
-                                        tint = MaterialTheme.colorScheme.error,
-                                        contentDescription = null,
-                                    )
-                                },
-                                modifier =
-                                    Modifier.clickable {
-                                        val map = playlistSong.map
-                                        coroutineScope.launch(Dispatchers.IO) {
-                                            val browseId = playlistBrowseId
-                                            if (browseId != null) {
-                                                val remoteResult = removeSongFromRemotePlaylist(browseId, map)
-                                                if (remoteResult.isFailure) {
-                                                    withContext(Dispatchers.Main) {
-                                                        Toast
-                                                            .makeText(
-                                                                context,
-                                                                context.getString(R.string.error_unknown),
-                                                                Toast.LENGTH_SHORT,
-                                                            ).show()
-                                                        onDismiss()
-                                                    }
-                                                    return@launch
+                    if (playlistSong != null && !isHiddenPlaylist) {
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    text = stringResource(R.string.remove_from_playlist),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            leadingContent = {
+                                Icon(
+                                    painter = painterResource(R.drawable.delete),
+                                    tint = MaterialTheme.colorScheme.error,
+                                    contentDescription = null,
+                                )
+                            },
+                            modifier =
+                                Modifier.clickable {
+                                    val map = playlistSong.map
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        val browseId = playlistBrowseId
+                                        if (browseId != null) {
+                                            val remoteResult = removeSongFromRemotePlaylist(browseId, map)
+                                            if (remoteResult.isFailure) {
+                                                withContext(Dispatchers.Main) {
+                                                    Toast
+                                                        .makeText(
+                                                            context,
+                                                            context.getString(R.string.error_unknown),
+                                                            Toast.LENGTH_SHORT,
+                                                        ).show()
+                                                    onDismiss()
                                                 }
+                                                return@launch
                                             }
+                                        }
                                             database.withTransaction {
                                                 val maxPosition = maxPlaylistSongPosition(map.playlistId) ?: map.position
                                                 if (map.position < maxPosition) {
@@ -736,6 +737,7 @@ fun SongMenu(
                                                 onDismiss()
                                             }
                                         }
+
                                     },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             )
@@ -747,35 +749,35 @@ fun SongMenu(
                         }
 
                         if (isFromCache) {
-                            ListItem(
-                                headlineContent = {
-                                    Text(
-                                        text = stringResource(R.string.remove_from_cache),
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    text = stringResource(R.string.remove_from_cache),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            leadingContent = {
+                                Icon(
+                                    painter = painterResource(R.drawable.delete),
+                                    tint = MaterialTheme.colorScheme.error,
+                                    contentDescription = null,
+                                )
+                            },
+                            modifier =
+                                Modifier.clickable {
+                                    onDismiss()
+                                    cacheViewModel.removeSongFromCache(song.id)
                                 },
-                                leadingContent = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.delete),
-                                        tint = MaterialTheme.colorScheme.error,
-                                        contentDescription = null,
-                                    )
-                                },
-                                modifier =
-                                    Modifier.clickable {
-                                        onDismiss()
-                                        cacheViewModel.removeSongFromCache(song.id)
-                                    },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            )
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        )
 
-                            HorizontalDivider(
-                                modifier = dividerModifier,
-                                color = MaterialTheme.colorScheme.outlineVariant,
-                            )
-                        }
+                        HorizontalDivider(
+                            modifier = dividerModifier,
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                        )
+                    }
 
-                        if (!isLocalSong) {
+                    if (!isLocalSong && !isHiddenPlaylist) {
                             when (download?.state) {
                                 Download.STATE_COMPLETED -> {
                                     ListItem(
