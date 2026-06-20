@@ -131,6 +131,7 @@ fun SongMenu(
     playlistBrowseId: String? = null,
     onDismiss: () -> Unit,
     isFromCache: Boolean = false,
+    isHiddenPlaylist: Boolean = false,
 ) {
     val context = LocalContext.current
     val database = LocalDatabase.current
@@ -655,7 +656,7 @@ fun SongMenu(
                         )
                     }
 
-                    if (playlistSong != null) {
+                    if (playlistSong != null && !isHiddenPlaylist) {
                         ListItem(
                             headlineContent = {
                                 Text(
@@ -741,7 +742,7 @@ fun SongMenu(
                         )
                     }
 
-                    if (!isLocalSong) {
+                    if (!isLocalSong && !isHiddenPlaylist) {
                         when (download?.state) {
                             Download.STATE_COMPLETED -> {
                                 ListItem(

@@ -1232,6 +1232,7 @@ fun LocalPlaylistScreen(
                                                     playlistBrowseId = playlist?.playlist?.browseId,
                                                     navController = navController,
                                                     onDismiss = menuState::dismiss,
+                                                    isHiddenPlaylist = playlist?.playlist?.bookmarkedAt == null,
                                                 )
                                             }
                                         },
@@ -1361,6 +1362,7 @@ fun LocalPlaylistScreen(
                                                     playlistBrowseId = playlist?.playlist?.browseId,
                                                     navController = navController,
                                                     onDismiss = menuState::dismiss,
+                                                    isHiddenPlaylist = playlist?.playlist?.bookmarkedAt == null,
                                                 )
                                             }
                                         },
