@@ -711,6 +711,8 @@
     <string name="backup_downloaded_songs_label">Include Downloaded Songs</string>
     <string name="backup_downloaded_songs_desc">Back up song IDs and re-download after restore</string>
     <string name="downloads_in_progress">Downloads in progress</string>
+    <string name="restore_downloaded_songs_label">Restore Downloaded Songs Queue</string>
+    <string name="restore_downloaded_songs_desc">Re-download songs after restore</string>
     <string name="discord_integration">Discord Integration</string>
     <string name="account_integrations_summary">Discord, Last.fm, Libre.fm, ListenBrainz</string>
     <string name="discord_login_description">Connect your Discord account with OAuth so ArchiveTune can publish Rich Presence.</string>

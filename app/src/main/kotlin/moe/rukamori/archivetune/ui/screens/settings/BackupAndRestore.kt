@@ -148,7 +148,8 @@ fun BackupAndRestore(
     var showSpotifyLogin by rememberSaveable { mutableStateOf(false) }
     var pendingBackupCategories by remember { mutableStateOf(BackupCategory.entries.toSet()) }
     var pendingRestoreCategories by remember { mutableStateOf(BackupCategory.entries.toSet()) }
-    var backupDownloadedSongs by rememberSaveable { mutableStateOf(false) }
+    var backupDownloadedSongs by rememberSaveable { mutableStateOf(true) }
+    var restoreDownloadedSongs by rememberSaveable { mutableStateOf(true) }
 
     val backupRestoreProgress by viewModel.backupRestoreProgress.collectAsStateWithLifecycle()
     val spotifyState by spotifyAccountViewModel.uiState.collectAsStateWithLifecycle()
@@ -165,7 +166,7 @@ fun BackupAndRestore(
     val restoreLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri != null) {
-                viewModel.restore(context, uri, pendingRestoreCategories)
+                viewModel.restore(context, uri, pendingRestoreCategories, restoreDownloadedSongs)
             }
         }
     val importPlaylistFromCsv =
@@ -293,13 +294,16 @@ fun BackupAndRestore(
         BackupOptionsDialog(
             title = stringResource(R.string.restore_options_title),
             confirmLabel = stringResource(R.string.action_restore),
-            onConfirm = { categories, _ ->
+            onConfirm = { categories, restoreDownloaded ->
                 pendingRestoreCategories = categories
+                restoreDownloadedSongs = restoreDownloaded
                 showRestoreOptionsDialog = false
                 restoreLauncher.launch(arrayOf("application/octet-stream"))
             },
             onDismiss = { showRestoreOptionsDialog = false },
-            showDownloadedSongsToggle = false,
+            showDownloadedSongsToggle = true,
+            toggleLabel = R.string.restore_downloaded_songs_label,
+            toggleDesc = R.string.restore_downloaded_songs_desc,
         )
     }
 
@@ -852,9 +856,11 @@ private fun BackupOptionsDialog(
     onConfirm: (Set<BackupCategory>, Boolean) -> Unit,
     onDismiss: () -> Unit,
     showDownloadedSongsToggle: Boolean = true,
+    toggleLabel: Int = R.string.backup_downloaded_songs_label,
+    toggleDesc: Int = R.string.backup_downloaded_songs_desc,
 ) {
     var selected by remember { mutableStateOf(BackupCategory.entries.toSet()) }
-    var backupDownloadedSongs by remember { mutableStateOf(false) }
+    var backupDownloadedSongs by remember { mutableStateOf(true) }
 
     DefaultDialog(
         onDismiss = onDismiss,
@@ -866,7 +872,7 @@ private fun BackupOptionsDialog(
             TextButton(
                 onClick = { onConfirm(selected, backupDownloadedSongs) },
                 shapes = ButtonDefaults.shapes(),
-                enabled = selected.isNotEmpty(),
+                enabled = selected.isNotEmpty() || backupDownloadedSongs,
             ) {
                 Text(confirmLabel)
             }
@@ -968,7 +974,7 @@ private fun BackupOptionsDialog(
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         Text(
-                            text = stringResource(R.string.backup_downloaded_songs_label),
+                            text = stringResource(toggleLabel),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -976,14 +982,14 @@ private fun BackupOptionsDialog(
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
-                            text = stringResource(R.string.backup_downloaded_songs_desc),
+                            text = stringResource(toggleDesc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    Switch(
+                    Checkbox(
                         checked = backupDownloadedSongs,
                         onCheckedChange = { backupDownloadedSongs = it },
                     )

@@ -297,7 +297,7 @@ class BackupRestoreViewModel @Inject constructor(
         }
     }
 
-    fun restore(context: Context, uri: Uri, categories: Set<BackupCategory>) {
+    fun restore(context: Context, uri: Uri, categories: Set<BackupCategory>, restoreDownloadedSongs: Boolean = true) {
         viewModelScope.launch(Dispatchers.IO) {
             val title = context.getString(R.string.restore_in_progress)
             try {
@@ -337,7 +337,7 @@ class BackupRestoreViewModel @Inject constructor(
                                 name == "${InternalDatabase.DB_NAME}-shm" ||
                                 name == "${InternalDatabase.DB_NAME}-journal"
                             )) ||
-                            name == DOWNLOADED_SONGS_FILENAME
+                            (restoreDownloadedSongs && name == DOWNLOADED_SONGS_FILENAME)
                     }
 
                 val totalUnits = 1 + (if (includeLibrary) 1 else 0) + restoreEntries.size
