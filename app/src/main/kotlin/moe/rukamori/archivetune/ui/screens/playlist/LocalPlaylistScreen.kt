@@ -918,7 +918,8 @@ fun LocalPlaylistScreen(
 
                                 Spacer(modifier = Modifier.height(24.dp))
 
-                                // Action Buttons Row
+                                if (playlist.playlist.bookmarkedAt != null) {
+// Action Buttons Row
                                 Row(
                                     modifier =
                                         Modifier
@@ -1182,6 +1183,7 @@ fun LocalPlaylistScreen(
                                 }
 
                                 Spacer(modifier = Modifier.height(24.dp))
+}
                             }
                         }
                     }
@@ -1305,6 +1307,7 @@ fun LocalPlaylistScreen(
                                                     playlistBrowseId = playlist?.playlist?.browseId,
                                                     navController = navController,
                                                     onDismiss = menuState::dismiss,
+                                                    isHiddenPlaylist = playlist?.playlist?.bookmarkedAt == null,
                                                 )
                                             }
                                         },
@@ -1437,6 +1440,7 @@ fun LocalPlaylistScreen(
                                                     playlistBrowseId = playlist?.playlist?.browseId,
                                                     navController = navController,
                                                     onDismiss = menuState::dismiss,
+                                                    isHiddenPlaylist = playlist?.playlist?.bookmarkedAt == null,
                                                 )
                                             }
                                         },

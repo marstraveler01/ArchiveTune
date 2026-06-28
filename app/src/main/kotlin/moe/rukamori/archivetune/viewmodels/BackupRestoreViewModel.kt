@@ -34,6 +34,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import moe.rukamori.archivetune.MainActivity
 import moe.rukamori.archivetune.R
+import moe.rukamori.archivetune.constants.PendingRestoreSongIdsKey
 import moe.rukamori.archivetune.db.InternalDatabase
 import moe.rukamori.archivetune.db.MusicDatabase
 import moe.rukamori.archivetune.db.entities.ArtistEntity
@@ -43,10 +44,13 @@ import moe.rukamori.archivetune.extensions.div
 import moe.rukamori.archivetune.extensions.tryOrNull
 import moe.rukamori.archivetune.extensions.zipInputStream
 import moe.rukamori.archivetune.extensions.zipOutputStream
+import androidx.media3.exoplayer.offline.Download
+import moe.rukamori.archivetune.playback.DownloadUtil
 import moe.rukamori.archivetune.playback.MusicService
 import moe.rukamori.archivetune.playback.MusicService.Companion.PERSISTENT_QUEUE_FILE
 import moe.rukamori.archivetune.utils.dataStore
 import moe.rukamori.archivetune.utils.reportException
+import org.json.JSONArray
 import org.xmlpull.v1.XmlPullParser
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -166,6 +170,7 @@ class BackupRestoreViewModel
     @Inject
     constructor(
         val database: MusicDatabase,
+        val downloadUtil: DownloadUtil,
     ) : ViewModel() {
         private val _backupRestoreProgress = MutableStateFlow<BackupRestoreProgressUi?>(null)
         val backupRestoreProgress: StateFlow<BackupRestoreProgressUi?> = _backupRestoreProgress.asStateFlow()
@@ -192,6 +197,7 @@ class BackupRestoreViewModel
             context: Context,
             uri: Uri,
             categories: Set<BackupCategory>,
+            backupDownloadedSongs: Boolean = false,
         ) {
             viewModelScope.launch(Dispatchers.IO) {
                 val title = context.getString(R.string.backup_in_progress)
@@ -308,6 +314,7 @@ class BackupRestoreViewModel
             context: Context,
             uri: Uri,
             categories: Set<BackupCategory>,
+            restoreDownloadedSongs: Boolean = true,
         ) {
             viewModelScope.launch(Dispatchers.IO) {
                 val title = context.getString(R.string.restore_in_progress)
@@ -325,12 +332,14 @@ class BackupRestoreViewModel
 
                     val entryNames = ArrayList<String>()
                     var hasDb = false
+                    var hasDownloadedSongs = false
                     context.applicationContext.contentResolver.openInputStream(uri)?.use { stream ->
                         stream.zipInputStream().use { zip ->
                             var entry = zip.nextEntry
                             while (entry != null) {
                                 entryNames.add(entry.name)
                                 if (entry.name == InternalDatabase.DB_NAME) hasDb = true
+                                if (entry.name == DOWNLOADED_SONGS_FILENAME) hasDownloadedSongs = true
                                 entry = zip.nextEntry
                             }
                         }
@@ -347,7 +356,8 @@ class BackupRestoreViewModel
                                             name == "${InternalDatabase.DB_NAME}-shm" ||
                                             name == "${InternalDatabase.DB_NAME}-journal"
                                     )
-                                )
+                                ) ||
+                                (restoreDownloadedSongs && name == DOWNLOADED_SONGS_FILENAME)
                         }
 
                     val totalUnits = 1 + (if (includeLibrary) 1 else 0) + restoreEntries.size
@@ -396,7 +406,26 @@ class BackupRestoreViewModel
                                         }
                                     }
 
-                                    InternalDatabase.DB_NAME,
+                                    DOWNLOADED_SONGS_FILENAME -> {
+                                        emit(context.getString(R.string.restore_step_downloaded_songs), indeterminate = true)
+                                        val jsonString = zip.readBytes().toString(Charsets.UTF_8)
+                                        if (jsonString.isNotBlank()) {
+                                            try {
+                                                val jsonArray = JSONArray(jsonString)
+                                                val songIds = mutableListOf<String>()
+                                                for (i in 0 until jsonArray.length()) {
+                                                    jsonArray.optString(i)?.takeIf(String::isNotBlank)?.let(songIds::add)
+                                                }
+                                                if (songIds.isNotEmpty()) {
+                                                    context.dataStore.edit { prefs ->
+                                                        prefs[PendingRestoreSongIdsKey] = songIds.toSet()
+                                                    }
+                                                }
+                                            } catch (_: Exception) { }
+                                        }
+                                    }
+
+                                InternalDatabase.DB_NAME,
                                     "${InternalDatabase.DB_NAME}-wal",
                                     "${InternalDatabase.DB_NAME}-shm",
                                     "${InternalDatabase.DB_NAME}-journal",
@@ -808,6 +837,7 @@ class BackupRestoreViewModel
             const val SETTINGS_FILENAME = "settings.preferences_pb"
             const val SETTINGS_XML_FILENAME = "settings.xml"
             private const val BUFFER_SIZE = 64 * 1024
+            const val DOWNLOADED_SONGS_FILENAME = "downloaded_songs.json"
 
             val ACCOUNT_PREF_KEYS: Set<String> =
                 setOf(
